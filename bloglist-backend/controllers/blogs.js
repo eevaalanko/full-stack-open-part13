@@ -1,15 +1,42 @@
 const router = require('express').Router()
 
-const { Blog } = require('../models')
+const { Blog, User } = require('../models')
+
+
+
+
 
 router.get('/', async (req, res) => {
-  const blogs = await Blog.findAll()
+  const blogs = await Blog.findAll({
+    attributes: { exclude: ['userId'] },
+    include: {
+      model: User,
+      attributes: ['name']
+    }
+  })
   res.json(blogs)
 })
 
+
+const tokenExtractor = (req, res, next) => {
+  const authorization = req.get('authorization')
+  if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
+    try {
+      req.decodedToken = jwt.verify(authorization.substring(7), SECRET)
+    } catch{
+      return res.status(401).json({ error: 'token invalid' })
+    }
+  }  else {
+    return res.status(401).json({ error: 'token missing' })
+  }
+  next()
+}
+
+
 router.post('/', async (req, res) => {
   try {
-    const blog = await Blog.create(req.body)
+    const user = await User.findByPk(req.decodedToken.id)
+    const blog = await Blog.create({...req.body, userId: user.id})
     res.json(blog)
   } catch(error) {
     return res.status(400).json({ error })
@@ -38,7 +65,7 @@ router.delete('/:id', blogFinder, async (req, res) => {
 
 router.put('/:id', blogFinder, async (req, res) => {
   if (req.blog) {
-    req.blog.likes = req.blog.likes + req.body.likes  
+    req.blog.likes = req.blog.likes + req.body.likes
     await req.blog.save()
     res.json(req.blog)
   } else {
