@@ -1,80 +1,51 @@
-/* eslint-disable no-undef  */
-require('dotenv').config()
-const blogsRouter = require('express').Router()
-const Blog = require('../models/blog')
-const User = require('../models/user')
-const jwt = require('jsonwebtoken')
+const router = require('express').Router()
 
+const { Blog } = require('../models')
 
-blogsRouter.get('/', async (request, response) => {
-  const blogs = await Blog.find({}).populate('user', { username: 1, name: 1 })
-  console.log('operation returned the following blogs', blogs)
-  response.json(blogs)
+router.get('/', async (req, res) => {
+  const blogs = await Blog.findAll()
+  res.json(blogs)
 })
 
-blogsRouter.post('/', async (request, response) => {
-  let blog = {}
-  let requ = request.body
-
-
-  console.log('request ', request)
-  const decodedToken = jwt.verify(request.token, process.env.SECRET)
-  if (!request.token || !decodedToken.id) {
-    return response.status(403).json({ error: 'token missing or invalid' })
+router.post('/', async (req, res) => {
+  try {
+    const blog = await Blog.create(req.body)
+    res.json(blog)
+  } catch(error) {
+    return res.status(400).json({ error })
   }
-
-  const user = await User.findById(decodedToken.id)
-
-  requ.likes === undefined
-    ? (blog = new Blog({
-      title: requ.title,
-      author: requ.author,
-      url: requ.url,
-      user: user._id,
-      likes: 0,
-    }))
-    : (blog = new Blog({
-      title: requ.title,
-      author: requ.author,
-      url: requ.url,
-      user: user._id,
-      likes: requ.likes,
-    }))
-
-  const savedBlog = await blog.save()
-
-  user.blogs = user.blogs.concat(savedBlog._id)
-  await user.save()
-  response.status(201).json(savedBlog.populate('user', { username: 1, name: 1 }))
 })
 
-blogsRouter.delete('/:id', async (request, response) => {
-  const blog = await Blog.findById(request.params.id)
-  // eslint-disable-next-line no-undef
-  const decodedToken = jwt.verify(request.token, process.env.SECRET)
-  if (blog.user.toString() !== decodedToken.id) {
-    return response
-      .status(401)
-      .json({ error: 'user is not writer of that blog' })
+const blogFinder = async (req, res, next) => {
+  req.blog = await Blog.findByPk(req.params.id)
+  next()
+}
+
+router.get('/:id', blogFinder, async (req, res) => {
+  if (req.blog) {
+    res.json(req.blog)
+  } else {
+    res.status(404).end()
   }
-  await Blog.findByIdAndRemove(request.params.id)
-  response.status(204).end()
 })
 
-blogsRouter.put('/:id', async (request, response) => {
-  const body = request.body
-
-  const blog = {
-    title: body.title,
-    url: body.url,
-    likes: body.likes,
+router.delete('/:id', blogFinder, async (req, res) => {
+  if (req.blog) {
+    await req.blog.destroy()
   }
-
-  const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, blog, {
-    new: true,
-  })
-
-  response.json(updatedBlog)
+  res.status(204).end()
 })
 
-module.exports = blogsRouter
+router.put('/:id', blogFinder, async (req, res) => {
+  if (req.blog) {
+    req.blog.likes = req.blog.likes + req.body.likes  
+    await req.blog.save()
+    res.json(req.blog)
+  } else {
+    res.status(404).end()
+  }
+})
+
+
+module.exports = router
+

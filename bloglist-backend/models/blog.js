@@ -1,40 +1,32 @@
-const mongoose = require('mongoose')
-const config = require('./../utils/config')
+const {Model, DataTypes} = require('sequelize')
 
-const uniqueValidator = require('mongoose-unique-validator')
+const {sequelize} = require('../util/db')
 
-const blogSchema = mongoose.Schema({
-  title: { type: String, required: true },
-  author: { type: String, required: true },
-  url: String,
-  likes: Number,
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }
-})
 
-// Apply the uniqueValidator plugin to userSchema.
-blogSchema.plugin(uniqueValidator)
+class Blog extends Model {
+}
 
-blogSchema.set('toJSON', {
-  transform: (document, returnedObject) => {
-    returnedObject.id = returnedObject._id.toString()
-    delete returnedObject._id
-    delete returnedObject.__v
+Blog.init({
+  id: {
+    type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true
   },
+  author: {
+    type: DataTypes.TEXT, allowNull: true
+  },
+  url: {
+    type: DataTypes.TEXT, allowNull: false
+  },
+  title: {
+    type: DataTypes.TEXT, allowNull: false
+  },
+  likes: {
+    type: DataTypes.INTEGER, default: 0
+  }
+}, {
+  sequelize, underscored: true, timestamps: false, modelName: 'blog'
 })
 
-mongoose
-  .connect(config.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log('connected to MongoDB')
-  })
-  .catch((error) => {
-    console.log('error connecting to MongoDB:', error.message)
-  })
+// Blog.sync()
 
-module.exports = mongoose.model('Blog', blogSchema)
+
+module.exports = Blog
