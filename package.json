@@ -1,0 +1,7 @@
+{
+  "name": "full-stack-open-part13",
+  "version": "1.0.0",
+  "dependencies": {
+    "umzug": "^3.2.1"
+  }
+}
