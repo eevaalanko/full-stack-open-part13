@@ -13,19 +13,20 @@ User.init({
   username: {
     type: DataTypes.STRING,
     unique: true,
-    allowNull: false
+    allowNull: false,
+    validate: {
+      isEmail: true,
+    }
   },
   name: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
   },
 }, {
   sequelize,
   underscored: true,
   timestamps: true,
   createdAt: true,
-
-  // I want updatedAt to actually be called updateTimestamp
   updatedAt: 'updateTimestamp'
   modelName: 'user'
 })
